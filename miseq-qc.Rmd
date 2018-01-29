@@ -11,9 +11,6 @@ library(cowplot)
 
 ```{r, echo = FALSE, message = FALSE}
 
-# Directory with run statistics files
-dir = "/Volumes/Research/Common/Equipment/MiSeq/quality-control/"
-
 # Define limits
 upper.cluster <- 1500
 lower.cluster <- 500
@@ -38,14 +35,14 @@ lower.aligned <- 0.5
 ```{r, echo = FALSE, message = FALSE}
 
 # all Excel files starting with six numbers
-files = list.files(path = dir, pattern = "^\\d{6}.*.xls")
+files = list.files(path = "./", pattern = "^\\d{6}.*.xls")
 options(tz = "Europe/Zurich")
 
 data_reads = data.frame()
 
 for (f in files) {
   r1 <-
-    read_excel(paste0(dir, f), range = "A11:P12") %>%
+    read_excel(f, range = "A11:P12") %>%
     mutate(run_name = f) %>%
     mutate(date = as.Date(paste(substr(run_name, 1,2),
                                 substr(run_name, 3,4),
@@ -60,7 +57,7 @@ for (f in files) {
     mutate(read = "Read 1")
 
   r2 <-
-    read_excel(paste0(dir, f), range = "A16:P17") %>%
+    read_excel(f, range = "A16:P17") %>%
     mutate(run_name = f) %>%
     mutate(date = as.Date(paste(substr(run_name, 1,2),
                                 substr(run_name, 3,4),
@@ -75,7 +72,7 @@ for (f in files) {
     mutate(read = "Index 1")
         
   r3 <-
-    read_excel(paste0(dir, f), range = "A21:P22") %>%
+    read_excel(f, range = "A21:P22") %>%
     mutate(run_name = f) %>%
     mutate(date = as.Date(paste(substr(run_name, 1,2),
                                 substr(run_name, 3,4),
@@ -242,7 +239,7 @@ report <-
                   c(0.99, 0.99, 0.66, 0.66, 0.33, 0.33),
                   size = 14, hjust = 0.5)
 
-ggsave(paste0(dir, "NGS_run_quality_monitoring_summary.pdf"),
+ggsave("NGS_run_quality_monitoring_summary.pdf",
        report, width = 21/2.54, height = 30/2.54)
 
 ```
