@@ -1,7 +1,7 @@
 # MiSeq quality control
 > Different tools and scripts to trace quality of Illumina MiSeq runs
 
-#[miseq-qc.Rmd](https://github.com/medvir/miseq-qc/blob/master/miseq-qc.Rmd)
+#miseq-qc.Rmd
 
 ## Goal
 Display quality performances of past MiSeq runs in a summary file.
@@ -18,4 +18,4 @@ In Order to use this R Markdown script, you need to export and save the run_summ
 * *miseq-qc.Rmd* file has to be in that same folder
 
 ## Execution
-Open *miseq-qc.Rmd* in RStudio and *Knit the current document (⇧⌘K)*
+Open [miseq-qc.Rmd](https://github.com/medvir/miseq-qc/blob/master/miseq-qc.Rmd) in RStudio and *Knit the current document (⇧⌘K)*
