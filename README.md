@@ -1,7 +1,7 @@
 # MiSeq quality control
 > Different tools and scripts to trace quality of Illumina MiSeq runs
 
-#miseq-qc.Rmd
+# miseq-qc.Rmd
 
 ## Goal
 Display quality performances of past MiSeq runs in a summary file.
