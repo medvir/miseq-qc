@@ -1,0 +1,249 @@
+---
+title: "NGS run quality monitoring"
+output: pdf_document
+---
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(readxl)
+library(cowplot)
+```
+
+```{r, echo = FALSE, message = FALSE}
+
+# Directory with run statistics files
+dir = "/Volumes/Research/Common/Equipment/MiSeq/quality-control/"
+
+# Define limits
+upper.cluster <- 1500
+lower.cluster <- 500
+
+upper.reads <- 30
+lower.reads <- 15
+
+upper.q30 <- 100
+lower.q30 <- 85
+  
+upper.passfilter <- 100
+lower.passfilter <- 90
+  
+upper.error <- 1
+lower.error <- 0
+  
+upper.aligned <- 2.5
+lower.aligned <- 0.5
+
+```
+
+```{r, echo = FALSE, message = FALSE}
+
+# all Excel files starting with six numbers
+files = list.files(path = dir, pattern = "^\\d{6}.*.xls")
+options(tz = "Europe/Zurich")
+
+data_reads = data.frame()
+
+for (f in files) {
+  r1 <-
+    read_excel(paste0(dir, f), range = "A11:P12") %>%
+    mutate(run_name = f) %>%
+    mutate(date = as.Date(paste(substr(run_name, 1,2),
+                                substr(run_name, 3,4),
+                                substr(run_name, 5,6), sep = "/"),
+                          format = "%y/%m/%d")) %>%
+    select(date, run_name, "Density (K/mm2)", "Reads (M)",
+           "Reads PF (M)", "% >= Q30", "Clusters PF (%)",
+           "Aligned (%)", "Error Rate (%)") %>%
+    gather(key = key, value = value, -date, -run_name) %>%
+    rowwise() %>%
+    mutate(value = as.numeric(strsplit(value, " ")[[1]][1])) %>%
+    mutate(read = "Read 1")
+
+  r2 <-
+    read_excel(paste0(dir, f), range = "A16:P17") %>%
+    mutate(run_name = f) %>%
+    mutate(date = as.Date(paste(substr(run_name, 1,2),
+                                substr(run_name, 3,4),
+                                substr(run_name, 5,6), sep = "/"),
+                          format = "%y/%m/%d")) %>%
+    select(date, run_name, "Density (K/mm2)", "Reads (M)",
+           "Reads PF (M)", "% >= Q30", "Clusters PF (%)",
+           "Aligned (%)", "Error Rate (%)") %>%
+    gather(key = key, value = value, -date, -run_name) %>%
+    rowwise() %>%
+    mutate(value = as.numeric(strsplit(value, " ")[[1]][1])) %>%
+    mutate(read = "Index 1")
+        
+  r3 <-
+    read_excel(paste0(dir, f), range = "A21:P22") %>%
+    mutate(run_name = f) %>%
+    mutate(date = as.Date(paste(substr(run_name, 1,2),
+                                substr(run_name, 3,4),
+                                substr(run_name, 5,6), sep = "/"),
+                          format = "%y/%m/%d")) %>%
+    select(date, run_name, "Density (K/mm2)", "Reads (M)",
+           "Reads PF (M)", "% >= Q30", "Clusters PF (%)",
+           "Aligned (%)", "Error Rate (%)") %>%
+    gather(key = key, value = value, -date, -run_name) %>%
+    rowwise() %>%
+    mutate(value = as.numeric(strsplit(value, " ")[[1]][1])) %>%
+    mutate(read = "Index 2")
+
+  data_reads <- rbind(data_reads, r1, r2, r3)
+}
+
+```
+
+# Number of total reads and reads passing filter
+```{r, echo = FALSE, message = FALSE}
+
+plot_n <-
+  data_reads %>%
+  filter(key %in% c("Reads (M)", "Reads PF (M)")) %>%
+  filter(read == "Read 1") %>%
+  mutate(valid = ifelse(value < lower.reads | value > upper.reads, "not valid", "valid")) %>%
+  ggplot(aes(x = date, y = value, shape = key, color = valid)) +
+    #geom_line() +
+    geom_point(size = 3) +
+    scale_colour_manual(values = c("#D55E00", "#228B22")) +
+    scale_shape_manual(values = c(16, 17)) +
+    panel_border() + background_grid(major = "xy", minor = "xy") +
+    #ylim(0,50) +
+    geom_hline(yintercept = upper.reads, color = "black", linetype = "dashed", size = 0.25) +
+    geom_hline(yintercept = lower.reads, color = "black", linetype = "dashed", size = 0.25) +
+    theme(legend.position = "") + ylab("Number of reads [M]") + xlab("")
+plot_n
+
+```
+
+# Cluster density
+```{r, echo = FALSE, message = FALSE}
+
+plot_c <-
+  data_reads %>%
+  filter(key %in% c("Density (K/mm2)")) %>%
+  filter(read == "Read 1") %>%
+  mutate(valid = ifelse(value < lower.cluster | value > upper.cluster, "not valid", "valid")) %>%
+  ggplot(aes(x = date, y = value, color = valid)) +
+    #geom_line() +
+    geom_point(size = 3, shape = 16) +
+    scale_colour_manual(values = c("#D55E00", "#228B22")) +
+    panel_border() + background_grid(major = "xy", minor = "xy") +
+    #ylim(0,2000) +
+    geom_hline(yintercept = lower.cluster, color = "black", linetype = "dashed", size = 0.25) +
+    geom_hline(yintercept = upper.cluster, color = "black", linetype = "dashed", size = 0.25) +
+    theme(legend.position = "") + ylab("Cluster density [K/mm2]") + xlab("")
+plot_c
+
+```
+
+# Cluster passing filter
+```{r, echo = FALSE, message = FALSE}
+
+plot_cp <-
+  data_reads %>%
+  filter(key == "Clusters PF (%)") %>%
+  filter(read == "Read 1") %>%
+  mutate(valid = ifelse(value < lower.passfilter | value > upper.passfilter, "not valid", "valid")) %>%
+  ggplot(aes(x = date, y = value, color = valid)) +
+    #geom_line() +
+    geom_point(size = 3, shape = 16) +
+    scale_colour_manual(values = c("#D55E00", "#228B22")) +
+    panel_border() + background_grid(major = "xy", minor = "xy") +
+    #ylim(75, 100) +
+    geom_hline(yintercept = lower.passfilter, color = "black", linetype = "dashed", size = 0.25) +
+    #geom_hline(yintercept = upper.passfilter, color = "black", linetype = "dashed", size = 0.25) +
+    theme(legend.position = "") + ylab("% clusters passing filter") + xlab("")
+plot_cp
+
+```
+
+# Read quality
+```{r, echo = FALSE, message = FALSE}
+
+plot_q <-
+  data_reads %>%
+  filter(key %in% c("% >= Q30")) %>%
+  mutate(valid = ifelse(value < lower.q30 | value > upper.q30, "not valid", "valid")) %>%
+  ggplot(aes(x = date, y = value, color = valid)) +
+    #geom_line() +
+    geom_point(size = 3, shape = 16) +
+    scale_colour_manual(values = c("#D55E00", "#228B22")) +
+    facet_grid(read ~ .) +
+    panel_border() + background_grid(major = "xy", minor = "xy") +
+    #ylim(80,100) +
+    geom_hline(yintercept = lower.q30, color = "black", linetype = "dashed", size = 0.25) +
+    #geom_hline(yintercept = upper.q30, color = "black", linetype = "dashed", size = 0.25) +
+    theme(legend.position = "") + ylab("% reads with quality >= Q30") + xlab("")
+plot_q
+
+```
+
+# Read errors
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+plot_e <-
+  data_reads %>%
+  filter(read == "Read 1") %>%
+  filter(key %in% c("Error Rate (%)")) %>%
+  mutate(value = ifelse(value == 0, NA, value)) %>%
+  mutate(valid = ifelse(value < lower.error | value >= upper.error, "not valid", "valid")) %>%
+  ggplot(aes(x = date, y = value, color = valid)) +
+    #geom_line() +
+    geom_point(size = 3, shape = 16) +
+    scale_colour_manual(values = c("#D55E00", "#228B22")) +
+    panel_border() + background_grid(major = "xy", minor = "xy") +
+    #ylim(0,1) +
+    #geom_hline(yintercept = lower.error, color = "black", linetype = "dashed", size = 0.25) +
+    geom_hline(yintercept = upper.error, color = "black", linetype = "dashed", size = 0.25) +
+    theme(legend.position = "") + ylab("PhiX error rate [%]") + xlab("")
+plot_e
+
+```
+
+# PhiX aligned
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+plot_a <-
+  data_reads %>%
+  filter(read == "Read 1") %>%
+  filter(key %in% c("Aligned (%)")) %>%
+  mutate(value = ifelse(value == 0, NA, value)) %>%
+  mutate(valid = ifelse(value < lower.aligned | value > upper.aligned, "not valid", "valid")) %>%
+  ggplot(aes(x = date, y = value, color = valid)) +
+    #geom_line() +
+    geom_point(size = 3, shape = 16) +
+    scale_colour_manual(values = c("#D55E00", "#228B22")) +
+    panel_border() + background_grid(major = "xy", minor = "xy") +
+    #ylim(0,2) +
+    geom_hline(yintercept = lower.aligned, color = "black", linetype = "dashed", size = 0.25) +
+    geom_hline(yintercept = upper.aligned, color = "black", linetype = "dashed", size = 0.25) +
+    theme(legend.position = "") + ylab("PhiX aligned [%]") + xlab("")
+plot_a
+
+```
+
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+# save pdf report summary
+report <-
+  ggdraw() +
+  draw_plot(plot_c, 0.0, 0.66, 0.5, 0.3) +
+  draw_plot(plot_n, 0.5, 0.66, 0.5, 0.3) +
+  draw_plot(plot_q, 0.0, 0.33, 0.5, 0.3) +
+  draw_plot(plot_cp,0.5, 0.33, 0.5, 0.3) +
+  draw_plot(plot_e, 0.0, 0.00, 0.5, 0.3) +
+  draw_plot(plot_a, 0.5, 0.00, 0.5, 0.3) +
+  draw_plot_label(c("Cluster density", "Number of reads",
+                    "Read quality", "Clusters passing filter",
+                    "PhiX error rate", "PhiX aligned"),
+                  c(0.25, 0.75, 0.25, 0.75, 0.25, 0.75),
+                  c(0.99, 0.99, 0.66, 0.66, 0.33, 0.33),
+                  size = 14, hjust = 0.5)
+
+ggsave(paste0(dir, "NGS_run_quality_monitoring_summary.pdf"),
+       report, width = 21/2.54, height = 30/2.54)
+
+```
+
